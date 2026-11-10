@@ -1,4 +1,4 @@
-<p align="center"><img src="icons/logo-512.png" alt="Fleet Cost logo" width="160"></p>
+<p align="center"><img src="logo.png" alt="Fleet Cost logo" width="160"></p>
 
 # Executive Fleet & Costing Intelligence Dashboard
 
@@ -35,6 +35,7 @@ Changing the rate does not change TOTAL COST; costs still come from your Excel s
 
 ```
 index.html              the whole app in one file
+logo.png                root copy of the logo (used by this README)
 icons/                  logo, favicons, apple-touch-icon, 192/512 and maskable icons
 manifest.webmanifest    installable-app (PWA) manifest
 favicon.ico             browser tab icon
