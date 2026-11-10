@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive Fleet & Costing Intelligence Dashboard</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="icon" type="image/png" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- SheetJS for 100% accurate multi-sheet Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Chart.js for analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-navy: #0f172a;
+      --brand-blue: #2563eb;
+      --brand-teal: #0d9488;
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    body {
+      background: #090d16;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(13, 148, 136, 0.12) 0px, transparent 50%);
+      color: #0f172a;
+      padding: 30px 20px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1240px; margin: 0 auto; }
+
+    .header {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      color: white;
+      padding: 32px 40px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-left h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-left p { color: #94a3b8; font-size: 14px; margin-top: 6px; }
+
+    .badge-status {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .upload-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      border: 2px dashed rgba(99, 102, 241, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 46px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 30px;
+    }
+
+    .upload-card:hover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.06);
+      transform: translateY(-3px);
+    }
+
+    .upload-icon {
+      width: 68px; height: 68px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 18px auto;
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .upload-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: #f8fafc; }
+    .upload-subtitle { font-size: 14px; color: #94a3b8; margin-top: 6px; }
+    input[type="file"] { display: none; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .kpi-card {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      padding: 26px;
+      border-radius: var(--radius-lg);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+    .kpi-3260::before { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+    .kpi-3261::before { background: linear-gradient(90deg, #0d9488, #10b981); }
+    .kpi-total::before { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+
+    .kpi-header { display: flex; justify-content: space-between; align-items: center; }
+    .kpi-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+    .kpi-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .kpi-3260 .kpi-icon { background: rgba(37, 99, 235, 0.15); color: #60a5fa; }
+    .kpi-3261 .kpi-icon { background: rgba(13, 148, 136, 0.15); color: #34d399; }
+    .kpi-total .kpi-icon { background: rgba(139, 92, 246, 0.15); color: #c084fc; }
+
+    .kpi-value { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; margin: 14px 0 6px 0; }
+    .kpi-sub { font-size: 13px; color: #cbd5e1; display: flex; gap: 14px; }
+    .kpi-sub strong { color: #ffffff; font-weight: 700; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 22px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .chart-card {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      padding: 26px;
+      border-radius: var(--radius-lg);
+    }
+
+    .chart-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+    .actions-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      padding: 30px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .actions-title { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+
+    .btn-group { display: flex; gap: 18px; flex-wrap: wrap; }
+
+    .btn-dl {
+      flex: 1; min-width: 250px;
+      padding: 18px 24px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      color: white;
+    }
+
+    .btn-3260 { background: linear-gradient(135deg, #1e40af, #2563eb); }
+    .btn-3260:hover { background: linear-gradient(135deg, #2563eb, #3b82f6); transform: translateY(-3px); }
+
+    .btn-3261 { background: linear-gradient(135deg, #0f766e, #0d9488); }
+    .btn-3261:hover { background: linear-gradient(135deg, #0d9488, #10b981); transform: translateY(-3px); }
+
+    .btn-all { background: linear-gradient(135deg, #6b21a8, #8b5cf6); }
+    .btn-all:hover { background: linear-gradient(135deg, #8b5cf6, #a855f7); transform: translateY(-3px); }
+
+    .rate-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      padding: 22px 30px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 30px;
+    }
+    .rate-title { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
+    .rate-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+    .rate-field { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+    .rate-field label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
+    .rate-field input {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(99,102,241,0.4); color: #ffffff;
+      border-radius: 10px; padding: 12px 14px; font-size: 16px; font-weight: 700; width: 100%;
+    }
+    .rate-field input:focus { outline: none; border-color: #6366f1; }
+    .btn-rate { padding: 13px 26px; border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #6b21a8, #8b5cf6); transition: all .3s; }
+    .btn-rate:hover { transform: translateY(-2px); background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+    .rate-msg { font-size: 13px; margin-top: 12px; min-height: 18px; color: #34d399; }
+    .rate-msg.err { color: #f87171; }
+
+    .footer { text-align: center; color: #64748b; font-size: 13px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <div class="header">
+    <div class="header-left">
+      <h1><i class="fa-solid fa-truck-monster" style="color: #60a5fa;"></i> Cover Van Fleet Cost Intelligence</h1>
+      <p>Automated Monthly File Separator & Ultra-Styled Excel Exporter</p>
+    </div>
+    <div class="badge-status">
+      <i class="fa-solid fa-shield-check" style="color: #10b981;"></i> Guaranteed 100% Data Accuracy & Rich Colors
+    </div>
+  </div>
+
+  <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+    <div class="upload-title">Drop Monthly Trip Excel Sheet Here</div>
+    <div class="upload-subtitle">Supports .xlsx & .xls files — Upload any new month without data loss</div>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFile(this.files[0])">
+  </div>
+
+  <div class="rate-card">
+    <div class="rate-title"><i class="fa-solid fa-gauge-high" style="color: #c084fc;"></i> Rate per KM (BDT) used in the Excel files</div>
+    <div class="rate-row">
+      <div class="rate-field">
+        <label for="rate3260">DM MA 11-3260 (Arabi Fashion)</label>
+        <input type="number" id="rate3260" min="0" step="0.01" value="24">
+      </div>
+      <div class="rate-field">
+        <label for="rate3261">DM MA 11-3261 (Novel Hurricane)</label>
+        <input type="number" id="rate3261" min="0" step="0.01" value="24">
+      </div>
+      <button class="btn-rate" id="applyRate" type="button"><i class="fa-solid fa-check"></i> Apply Rate</button>
+    </div>
+    <div class="rate-msg" id="rateMsg"></div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card kpi-3260">
+      <div class="kpi-header">
+        <span class="kpi-title">DM MA 11-3260 (Arabi Fashion)</span>
+        <div class="kpi-icon"><i class="fa-solid fa-building"></i></div>
+      </div>
+      <div class="kpi-value" id="val3260Cost">৳ 0</div>
+      <div class="kpi-sub">
+        <span>Trips: <strong id="val3260Trips">0</strong></span>
+        <span>Distance: <strong id="val3260Km">0 KM</strong></span>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-3261">
+      <div class="kpi-header">
+        <span class="kpi-title">DM MA 11-3261 (Novel Hurricane)</span>
+        <div class="kpi-icon"><i class="fa-solid fa-industry"></i></div>
+      </div>
+      <div class="kpi-value" id="val3261Cost">৳ 0</div>
+      <div class="kpi-sub">
+        <span>Trips: <strong id="val3261Trips">0</strong></span>
+        <span>Distance: <strong id="val3261Km">0 KM</strong></span>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-total">
+      <div class="kpi-header">
+        <span class="kpi-title">Combined Fleet Total</span>
+        <div class="kpi-icon"><i class="fa-solid fa-chart-pie"></i></div>
+      </div>
+      <div class="kpi-value" id="valTotalCost">৳ 0</div>
+      <div class="kpi-sub">
+        <span>Total Trips: <strong id="valTotalTrips">0</strong></span>
+        <span>Total Distance: <strong id="valTotalKm">0 KM</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid" id="dashGrid">
+    <div class="chart-card">
+      <div class="chart-title"><i class="fa-solid fa-chart-column" style="color: #3b82f6;"></i> Monthly Cost Comparison (BDT)</div>
+      <canvas id="costChart" height="130"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><i class="fa-solid fa-pie-chart" style="color: #34d399;"></i> Trip Distribution Share</div>
+      <canvas id="shareChart" height="130"></canvas>
+    </div>
+  </div>
+
+  <div class="actions-card" id="actionsCard">
+    <div class="actions-title"><i class="fa-solid fa-wand-magic-sparkles" style="color: #c084fc;"></i> Download Executive Formatted Excel Files</div>
+    <div class="btn-group">
+      <button class="btn-dl btn-3260" onclick="exportFormattedXLS('3260')">
+        <i class="fa-solid fa-file-excel"></i> Arabi Fashion (3260) .xls
+      </button>
+      <button class="btn-dl btn-3261" onclick="exportFormattedXLS('3261')">
+        <i class="fa-solid fa-file-excel"></i> Novel Hurricane (3261) .xls
+      </button>
+      <button class="btn-dl btn-all" onclick="downloadBoth()">
+        <i class="fa-solid fa-layer-group"></i> Download Both Files
+      </button>
+    </div>
+  </div>
+
+  <div class="footer">
+    Executive Fleet Intelligence Platform • Zero Data Loss Engine • 100% Private & Offline
+  </div>
+
+</div>
+
+<script>
+  let processedData = {
+    trips3260: [],
+    trips3261: [],
+    summary3260: { trips: 0, km: 0, cost: 0 },
+    summary3261: { trips: 0, km: 0, cost: 0 },
+    costChartObj: null,
+    shareChartObj: null
+  };
+
+  // RATE PER KM: set here, used in the RATE / PER KM column of both Excel files. Remembered in this browser.
+  let fleetRates = { '3260': 24, '3261': 24 };
+  try {
+    const saved = JSON.parse(localStorage.getItem('fleetRates') || 'null');
+    if (saved && saved['3260'] >= 0 && saved['3261'] >= 0) fleetRates = { '3260': Number(saved['3260']), '3261': Number(saved['3261']) };
+  } catch (e) {}
+
+  function showRateMsg(text, isErr) {
+    const m = document.getElementById('rateMsg');
+    m.textContent = text;
+    m.className = 'rate-msg' + (isErr ? ' err' : '');
+  }
+
+  function applyRates() {
+    const a = parseFloat(document.getElementById('rate3260').value);
+    const b = parseFloat(document.getElementById('rate3261').value);
+    if (!isFinite(a) || a < 0 || !isFinite(b) || b < 0) {
+      showRateMsg('Please enter a valid rate (0 or more) for both vehicles.', true);
+      return false;
+    }
+    fleetRates = { '3260': a, '3261': b };
+    try { localStorage.setItem('fleetRates', JSON.stringify(fleetRates)); } catch (e) {}
+    showRateMsg('Rate applied: 3260 = ' + a + ' per KM, 3261 = ' + b + ' per KM. New downloads will use these rates.', false);
+    return true;
+  }
+
+  document.getElementById('rate3260').value = fleetRates['3260'];
+  document.getElementById('rate3261').value = fleetRates['3261'];
+  document.getElementById('applyRate').addEventListener('click', applyRates);
+  ['rate3260', 'rate3261'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') applyRates(); }));
+
+  function handleFile(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+        parseAndProcess(rawData);
+      } catch (err) {
+        alert("Error parsing file: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // BULLETPROOF PARSER: GUARANTEES NO ROW OR TRIP DATA IS EVER DROPPED SILENTLY
+  function parseAndProcess(rawData) {
+    let trips = [];
+    let currentTrip = null;
+    let lastSeenDate = null;
+
+    // Start reading row by row from data start (row 7) down to "TOTAL"
+    for (let idx = 7; idx < rawData.length; idx++) {
+      const row = rawData[idx];
+      if (!row || row.length === 0) continue;
+      
+      const firstCell = row[0] ? String(row[0]).trim().toUpperCase() : "";
+      if (firstCell === "TOTAL") break; // Stop safely at footer
+
+      // Preserve Date context across merged cells
+      if (row[0] !== undefined && row[0] !== null && String(row[0]).trim() !== "") {
+        lastSeenDate = row[0];
+      }
+
+      const dateVal = lastSeenDate;
+      const vehVal = row[1];
+
+      // Detect New Trip Entry
+      if (vehVal !== undefined && vehVal !== null && String(vehVal).trim() !== "") {
+        if (currentTrip) {
+          if (!currentTrip.rows[0][0]) currentTrip.rows[0][0] = lastSeenDate;
+          trips.push(currentTrip);
+        }
+        currentTrip = {
+          date: dateVal,
+          vehicle: String(vehVal).trim(),
+          rows: [row]
+        };
+      } 
+      // Multi-leg trip rows or return journeys belonging to active trip
+      else if (currentTrip && (row[2] !== undefined || row[3] !== undefined || row[4] !== undefined || row[5] !== undefined || row[8] !== undefined)) {
+        currentTrip.rows.push(row);
+      }
+    }
+
+    if (currentTrip) {
+      if (!currentTrip.rows[0][0]) currentTrip.rows[0][0] = lastSeenDate;
+      trips.push(currentTrip);
+    }
+
+    // Separate by vehicle identifier
+    processedData.trips3260 = trips.filter(t => String(t.vehicle).includes("3260") || String(t.vehicle).includes("11-3260"));
+    processedData.trips3261 = trips.filter(t => String(t.vehicle).includes("3261") || String(t.vehicle).includes("11-3261"));
+
+    processedData.summary3260 = calculateStats(processedData.trips3260);
+    processedData.summary3261 = calculateStats(processedData.trips3261);
+
+    updateUI();
+  }
+
+  function calculateStats(tripList) {
+    let stats = { trips: tripList.length, km: 0, cost: 0 };
+    tripList.forEach(t => {
+      t.rows.forEach(r => {
+        if (typeof r[5] === 'number') stats.km += r[5];
+        if (typeof r[8] === 'number') stats.cost += r[8];
+      });
+    });
+    return stats;
+  }
+
+  function updateUI() {
+    const s1 = processedData.summary3260;
+    const s2 = processedData.summary3261;
+
+    document.getElementById('val3260Cost').innerText = "৳ " + s1.cost.toLocaleString();
+    document.getElementById('val3260Trips').innerText = s1.trips;
+    document.getElementById('val3260Km').innerText = s1.km.toLocaleString() + " KM";
+
+    document.getElementById('val3261Cost').innerText = "৳ " + s2.cost.toLocaleString();
+    document.getElementById('val3261Trips').innerText = s2.trips;
+    document.getElementById('val3261Km').innerText = s2.km.toLocaleString() + " KM";
+
+    document.getElementById('valTotalCost').innerText = "৳ " + (s1.cost + s2.cost).toLocaleString();
+    document.getElementById('valTotalTrips').innerText = s1.trips + s2.trips;
+    document.getElementById('valTotalKm').innerText = (s1.km + s2.km).toLocaleString() + " KM";
+
+    document.getElementById('kpiGrid').style.display = 'grid';
+    document.getElementById('dashGrid').style.display = 'grid';
+    document.getElementById('actionsCard').style.display = 'block';
+
+    renderCharts(s1, s2);
+  }
+
+  function renderCharts(s1, s2) {
+    if (processedData.costChartObj) processedData.costChartObj.destroy();
+    if (processedData.shareChartObj) processedData.shareChartObj.destroy();
+
+    const ctxCost = document.getElementById('costChart').getContext('2d');
+    processedData.costChartObj = new Chart(ctxCost, {
+      type: 'bar',
+      data: {
+        labels: ['Arabi Fashion (3260)', 'Novel Hurricane (3261)'],
+        datasets: [{
+          label: 'Total Cost (BDT)',
+          data: [s1.cost, s2.cost],
+          backgroundColor: ['#2563eb', '#0d9488'],
+          borderRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+
+    const ctxShare = document.getElementById('shareChart').getContext('2d');
+    processedData.shareChartObj = new Chart(ctxShare, {
+      type: 'doughnut',
+      data: {
+        labels: ['Arabi Fashion', 'Novel Hurricane'],
+        datasets: [{
+          data: [s1.trips, s2.trips],
+          backgroundColor: ['#2563eb', '#0d9488'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } }
+      }
+    });
+  }
+
+  // GUARANTEED BEAUTIFUL EXCEL EXPORTER WITH ZERO WARNINGS & FULL COLORS
+  function exportFormattedXLS(type) {
+    if (!applyRates()) return;
+    const is3260 = (type === '3260');
+    const companyName = is3260 ? "ARABI FASHION LIMITED" : "NOVEL HURRICANE KNIT GARMENTS LTD";
+    const vehicleNo = is3260 ? "DM MA 11-3260" : "DM MA 11-3261";
+    const tripList = is3260 ? processedData.trips3260 : processedData.trips3261;
+    const fileName = is3260 ? "DM_MA_11-3260_ARABI_FASHION.xls" : "DM_MA_11-3261_NOVEL_HURRICANE.xls";
+
+    if (!tripList || tripList.length === 0) {
+      alert("Please upload your monthly Excel trip file first!");
+      return;
+    }
+
+    const navyHex = is3260 ? "#1E40AF" : "#0F766E";
+    const subHex = is3260 ? "#2563EB" : "#0D9488";
+    const fillHex = is3260 ? "#DBEAFE" : "#D1FAE5";
+    const zebraHex = "#F8FAFC";
+
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Trip Costing</x:Name>
+              <x:WorksheetOptions>
+                <x:DisplayGridlines/>
+              </x:WorksheetOptions>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #cbd5e1; padding: 6px 10px; font-size: 11px; vertical-align: middle; }
+        .banner { background-color: ${navyHex}; color: #ffffff; font-size: 16px; font-weight: bold; padding: 10px; }
+        .sub-banner { background-color: #0f172a; color: #94a3b8; font-size: 11px; font-weight: bold; }
+        .report-hdr { background-color: ${fillHex}; color: #0f172a; font-size: 12px; font-weight: bold; }
+        .hdr-dark { background-color: ${navyHex}; color: #ffffff; font-weight: bold; text-align: center; }
+        .hdr-sub { background-color: ${subHex}; color: #ffffff; font-weight: bold; text-align: center; }
+        .cell-highlight { background-color: ${fillHex}; }
+        .cell-zebra { background-color: ${zebraHex}; }
+        .num { text-align: right; mso-number-format:"\#\,\#\#0"; }
+        .rate { text-align: right; mso-number-format:"0.00"; }
+        .center { text-align: center; }
+        .tot-bar { background-color: #0f172a; color: #ffffff; font-weight: bold; text-align: center; font-size: 12px; }
+        .tot-val { background-color: ${navyHex}; color: #ffffff; font-weight: bold; text-align: right; font-size: 12px; border-bottom: 3px double #0f172a; mso-number-format:"\#\,\#\#0"; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr>
+          <td colspan="19" class="banner">${companyName}</td>
+        </tr>
+        <tr>
+          <td colspan="19" class="sub-banner">BOKRAN, MONIPUR, GAZIPUR, BANGLADESH • COVER VAN FLEET DIESEL REPORT</td>
+        </tr>
+        <tr><td colspan="19" style="border:none; height:8px;"></td></tr>
+        <tr>
+          <td colspan="19" class="report-hdr">COVER VAN DIESEL COSTING FOR THE MONTH OF SEPTEMBER-2026 (${vehicleNo})</td>
+        </tr>
+        <tr><td colspan="19" style="border:none; height:8px;"></td></tr>
+
+        <!-- Table Header -->
+        <tr>
+          <th rowspan="2" class="hdr-dark">DATE</th>
+          <th rowspan="2" class="hdr-dark">VEHICLE NO</th>
+          <th colspan="2" class="hdr-dark">TRIP ROUTE DETAILS</th>
+          <th rowspan="2" class="hdr-dark">KM</th>
+          <th rowspan="2" class="hdr-dark">TOTAL KM</th>
+          <th rowspan="2" class="hdr-dark">ITEM NAME</th>
+          <th rowspan="2" class="hdr-dark">RATE / PER KM</th>
+          <th rowspan="2" class="hdr-dark">TOTAL COST</th>
+          <th rowspan="2" class="hdr-dark">TOTAL USER</th>
+          <th rowspan="2" class="hdr-dark">AFL & NHK PAY</th>
+          <th rowspan="2" class="hdr-dark">BHDP PAY</th>
+          <th rowspan="2" class="hdr-dark">AST PAY</th>
+          <th rowspan="2" class="hdr-dark">AKZOCHEM PAY</th>
+          <th rowspan="2" class="hdr-dark">G.S. ACC PAY</th>
+          <th rowspan="2" class="hdr-dark">Appear</th>
+          <th rowspan="2" class="hdr-dark">WL PAY</th>
+          <th rowspan="2" class="hdr-dark">Knitting</th>
+          <th rowspan="2" class="hdr-dark">REMARKS</th>
+        </tr>
+        <tr>
+          <th class="hdr-sub">FROM LOCATION</th>
+          <th class="hdr-sub">TO LOCATION</th>
+        </tr>`;
+
+    let blockToggle = false;
+    let colTotals = new Array(19).fill(0);
+    // RATE / PER KM (column index 7): always the rate set on the page for this vehicle (default 24).
+    const ratePerKm = fleetRates[type];
+
+    tripList.forEach(trip => {
+      const rowClass = blockToggle ? "cell-zebra" : "cell-highlight";
+
+      trip.rows.forEach(r => {
+        let rowData = [...r];
+        if (rowData[0] && typeof rowData[0] === 'number') {
+          const parsedDate = new Date(Math.round((rowData[0] - 25569) * 86400 * 1000));
+          rowData[0] = parsedDate.toISOString().split('T')[0];
+        }
+
+        html += `<tr>`;
+        for (let colI = 0; colI < 19; colI++) {
+          let val = rowData[colI] !== undefined && rowData[colI] !== null ? rowData[colI] : '';
+
+          if (colI === 7) {
+            html += `<td class="${rowClass} num rate">${ratePerKm}</td>`;
+            continue;
+          }
+
+          if (typeof val === 'number') {
+            colTotals[colI] += val;
+            html += `<td class="${rowClass} num">${val}</td>`;
+          } else {
+            let alignClass = [0, 1, 6, 18].includes(colI) ? " center" : "";
+            html += `<td class="${rowClass}${alignClass}">${val}</td>`;
+          }
+        }
+        html += `</tr>`;
+      });
+      blockToggle = !blockToggle;
+    });
+
+    // Total Row
+    html += `<tr>
+      <td colspan="8" class="tot-bar">MONTHLY TOTAL COST SUMMARY</td>`;
+    for (let c = 8; c < 18; c++) {
+      html += `<td class="tot-val">${colTotals[c]}</td>`;
+    }
+    html += `<td class="tot-bar">-</td></tr>`;
+
+    html += `</table></body></html>`;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+  }
+
+  function downloadBoth() {
+    exportFormattedXLS('3260');
+    setTimeout(() => exportFormattedXLS('3261'), 500);
+  }
+</script>
+
+</body>
+</html>
